@@ -31,13 +31,12 @@ struct CityTemperature {
     double _sum;
     double _total;
 
-    CityTemperature() {
-        _city = "";
-        _min = 0.0;
-        _max = 0.0;
-        _sum = 0.0;
-        _total = 0;
-    }
+    CityTemperature() = default;
+    CityTemperature(const CityTemperature&) = default;
+    CityTemperature(CityTemperature&&) = default;
+    CityTemperature& operator=(const CityTemperature&) = default;
+
+
 
     CityTemperature(std::string const& city, double min, double max, double sum, long total) {
         _city = city;
@@ -105,7 +104,8 @@ void print_output(CityMap cityMap, std::chrono::steady_clock::time_point start) 
     for (auto const& [city, value] : tempMap) {
         outputMsg += std::format("{}={:.1f}/{:.1f}/{:.1f}, ", city, value._min, (value._sum / value._total), value._max);
     }
-    std::cout << outputMsg.substr(0, outputMsg.rfind(", ")) << "}\n";
+    //std::cout << outputMsg.substr(0, outputMsg.rfind(", ")) << "}\n";
+    std::cout << outputMsg << "}\n";
 
     auto end = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
@@ -129,8 +129,7 @@ int main( int argc, char** argv)
     const bool debug_flag = (argc >= 3 && equalsIgnoreCase( argv[2], "debug"));
     
     auto start = std::chrono::high_resolution_clock::now();
-
-    CityMap cityMap = calculate_min_avg_max_temp(file, debug_flag);    
+ 
     print_output(calculate_min_avg_max_temp(file, debug_flag), start);
 
     
