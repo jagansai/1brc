@@ -1,6 +1,6 @@
 /*
 *** Attempting to solve 1 billion row challenge. This is a baseline attempt in making the code faster than the baseline java code.
-* 
+*
 */
 
 
@@ -21,6 +21,26 @@
 namespace {
     const int chunks_of_data_to_process = 50000000;
     const size_t bufferSize = 256;
+
+    void print_time_elapsed(std::chrono::steady_clock::time_point const& start, std::chrono::steady_clock::time_point const& end) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+        long hours = (long)elapsed / 3600;
+        long minutes = (long)(elapsed % 3600) / 60;
+        long seconds = (long)elapsed % 60;
+        std::cout << "Elapsed: ";
+        std::cout << std::setw(2) << std::setfill('0') << hours << ":"
+            << std::setw(2) << std::setfill('0') << minutes << ":"
+            << std::setw(2) << std::setfill('0') << seconds << '\n';
+    }
+
+    bool caseInsensitiveCharCompare(char c1, char c2) {
+        return std::tolower(c1) == std::tolower(c2);
+    }
+
+    bool equalsIgnoreCase(const std::string& str1, const std::string& str2) {
+        return str1.size() == str2.size() &&
+            std::equal(str1.begin(), str1.end(), str2.begin(), caseInsensitiveCharCompare);
+    }
 }
 
 struct CityTemperature {
@@ -49,20 +69,14 @@ struct CityTemperature {
 
 using CityMap = std::unordered_map<std::string, CityTemperature>;
 
-bool caseInsensitiveCharCompare(char c1, char c2) {
-    return std::tolower(c1) == std::tolower(c2);
-}
 
-bool equalsIgnoreCase(const std::string& str1, const std::string& str2) {
-    return str1.size() == str2.size() &&
-        std::equal(str1.begin(), str1.end(), str2.begin(), caseInsensitiveCharCompare);
-}
 
-CityMap calculate_min_avg_max_temp(FILE* file, bool debug_flag ) {
-    
+CityMap calculate_min_avg_max_temp(FILE* file, bool debug_flag) {
+
     char buffer[bufferSize];
-    CityMap cityMap;
+    CityMap cityMap(100);
     long rows = 0;
+    auto start = std::chrono::high_resolution_clock::now();
 
     while (fgets(buffer, bufferSize, file)) {
         size_t last_index = strcspn(buffer, "\n");
@@ -90,49 +104,49 @@ CityMap calculate_min_avg_max_temp(FILE* file, bool debug_flag ) {
         if (debug_flag) {
             ++rows;
             if (rows % chunks_of_data_to_process == 0) {
-                std::cout << rows << " completed\n";
+                std::cout << std::format("{} completed.\n", rows);
+                print_time_elapsed(start, std::chrono::high_resolution_clock::now());
+                start = std::chrono::high_resolution_clock::now();
             }
         }
     }
     return cityMap;
 }
 
-void print_output(CityMap cityMap, std::chrono::steady_clock::time_point start) {
+
+
+void print_output(const CityMap& cityMap, std::chrono::steady_clock::time_point start) {
     std::cout << "{";
     std::map<std::string, CityTemperature> tempMap{ cityMap.begin(), cityMap.end() };
     std::string outputMsg;
     for (auto const& [city, value] : tempMap) {
         outputMsg += std::format("{}={:.1f}/{:.1f}/{:.1f}, ", city, value._min, (value._sum / value._total), value._max);
     }
-    //std::cout << outputMsg.substr(0, outputMsg.rfind(", ")) << "}\n";
-    std::cout << outputMsg << "}\n";
+    std::cout << outputMsg.substr(0, outputMsg.rfind(", ")) << "}\n";
 
     auto end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-    long hours = (long)elapsed / 3600;
-    long minutes = (long)(elapsed % 3600) / 60;
-    long seconds = (long)elapsed % 60;
-    std::cout << std::setw(2) << std::setfill('0') << hours << ":"
-              << std::setw(2) << std::setfill('0') << minutes << ":"
-              << std::setw(2) << std::setfill('0') << seconds << std::endl;
+
+
+    std::chrono::duration<double> duration = end - start;
+    std::cout << "Time taken: " << duration.count() << " seconds" << '\n';
+
+    print_time_elapsed(start, end);
 }
 
 
-int main( int argc, char** argv)
-{    
+int main(int argc, char** argv)
+{
     FILE* file = fopen(argv[1], "r");
     if (!file) {
         std::perror("Error opening file");
         return 1;
     }
 
-    const bool debug_flag = (argc >= 3 && equalsIgnoreCase( argv[2], "debug"));
-    
-    auto start = std::chrono::high_resolution_clock::now();
- 
-    print_output(calculate_min_avg_max_temp(file, debug_flag), start);
+    const bool debug_flag = (argc >= 3 && equalsIgnoreCase(argv[2], "debug"));
 
-    
+    auto start = std::chrono::high_resolution_clock::now();
+
+    print_output(calculate_min_avg_max_temp(file, debug_flag), start);
 
     fclose(file);
 }
